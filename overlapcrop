@@ -351,7 +351,7 @@ tmpA2="$dir/overlapcrop_A_$$.cache"
 tmp1="$dir/overlapcrop_1_$$.miff"
 trap "rm -f $tmpA1 $tmpA2 $tmp1;" 0
 trap "rm -f $tmpA1 $tmpA2 $tmp1; exit 1" 1 2 3 15
-trap "rm -f $tmpA1 $tmpA2 $tmp1; exit 1" ERR
+#trap "rm -f $tmpA1 $tmpA2 $tmp1; exit 1" ERR
 
 # read the input image and filter image into the temp files and test validity.
 convert -quiet "$infile" $gray +repage "$tmpA1" ||
@@ -361,10 +361,15 @@ convert -quiet "$infile" $gray +repage "$tmpA1" ||
 im_version=`convert -list configure | \
 	sed '/^LIB_VERSION_NUMBER */!d;  s//,/;  s/,/,0/g;  s/,0*\([0-9][0-9]\)/\1/g'`
 
+if [ "$im_version" -ge "07000000" ]; then
+	identifying="magick identify"
+else
+	identifying="identify"
+fi
 
 # get width and height of image
-ww=`identify -ping -format "%w" $tmpA1`
-hh=`identify -ping -format "%h" $tmpA1`
+ww=`$identifying -ping -format "%w" $tmpA1`
+hh=`$identifying -ping -format "%h" $tmpA1`
 
 # get width and height of subsection
 sw=`echo "${size}" | cut -dx -f1`
@@ -372,12 +377,11 @@ sh=`echo "${size}" | cut -dx -f2`
 #echo "sw=$sw; sh=$sh"
 
 # test that subsection smaller than image
-[ $sw -ge $ww -o $sh -ge $hh ] && errMsg "--- SUBSECTION SIZE MUST BE SMALLER THAN INFILE SIZE ---"
+[ $sw -ge $ww -a $sh -ge $hh ] && errMsg "--- SUBSECTION SIZE MUST BE SMALLER THAN INFILE SIZE ---"
 
 
 # get offset amount in pixels for subsection taking into account overlap
 test=`echo "$overlap" | grep "%"`
-#echo "test=$test"
 if [ "$test" = "" ]; then
 	# overlap in pixels
 	ox=`echo "${overlap}" | cut -dx -f1`
@@ -393,6 +397,7 @@ else
 fi
 ow=`convert xc: -format "%[fx:$sw-$ox]" info:`
 oh=`convert xc: -format "%[fx:$sh-$oy]" info:`
+#echo "ox=$ox; oy=$oy; ow=$ow; oh=$oh;"
 
 # test if overlap is sw or sh
 [ $ox -eq $sw ] && errMsg "--- X OVERLAP CANNOT EQUAL THE WIDTH OF THE SUBSECTION ---"
@@ -425,7 +430,7 @@ for ((i=0;i<=eh;i+=oh)); do
 done
 num=$k
 
-echo "mode=$mode"
+#echo "mode=$mode"
 
 if [ "$mode" = "frames" -o "$mode" = "animation" ]; then
 	convert -size $size xc: $tmp1
@@ -468,7 +473,7 @@ echo ""
 if [ "$mode" = "frames" ]; then
 	convert $tmp1 -delete 0 ${outname}.$suffix
 elif [ "$mode" = "animation" ]; then
-	convert -delay $delay -dispose Background $tmp1 -delete 0 -loop $loop "${outname}_animation.$suffix"
+	convert -delay $delay -dispose Background $tmp1 -delete 0 -loop $loop "${outname}.$suffix"
 fi
 
 

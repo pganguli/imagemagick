@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# Developed by Fred Weinhaus 4/1/2017 .......... revised 5/4/2019
+# Developed by Fred Weinhaus 4/1/2017 .......... revised 4/21/2022
 #
 # ------------------------------------------------------------------------------
 # 
@@ -499,19 +499,27 @@ elif [ "$area" = "0" ]; then
 	cclproc="$viewing -define connected-components:mean-color=true -connected-components 4"
 fi
 
+if [ "$trim" = "yes" ]; then
+	trimming="-fuzz $tolerance% -trim +repage"
+else
+	trimming=""
+fi
 
 # process image
 if [ "$alpha_channel" = "no" -a "$maskfile" = "" -a "$method" = "floodfill" ]; then
 	# floodfill needs an extra border=1 to allow for floodfill to go all around
+	# dilate needs an extra black border=1 to permit erode to process without result extending oddly
 	convert \
 		\( $tmpA1 -bordercolor "$icolor" -border 1 $preproc1 "$preproc2" \
-			-fuzz $tolerance -trim +repage \
+			$trimming \
 			-bordercolor none -border 50 \
 			-background white -alpha background \
 			$alpha_disable -write mpr:img $alpha_enable \
 			-alpha extract \
 			-morphology dilate disk:$dilate \
+			-bordercolor black -border 1 \
 			$eroding \
+			-shave 1x1 \
 			$cclproc \
 			-blur 0x1 -level 0x50% -write mpr:msk1 +delete \) \
 		\( mpr:msk1 -negate -fill "gray($shadow%)" -opaque black \
@@ -527,13 +535,15 @@ elif [ "$alpha_channel" = "no" -a "$maskfile" = "" -a "$method" = "recolor" ]; t
 	# recolor using -transparent
 	convert \
 		\( $tmpA1 $preproc1 \
-			-fuzz $tolerance -trim +repage \
+			$trimming \
 			-bordercolor none -border 50 \
 			-background white -alpha background \
 			$alpha_disable -write mpr:img $alpha_enable \
 			-alpha extract \
 			-morphology dilate disk:$dilate \
+			-bordercolor black -border 1 \
 			$eroding \
+			-shave 1x1 \
 			$cclproc \
 			-blur 0x1 -level 0x50% -write mpr:msk1 +delete \) \
 		\( mpr:msk1 -negate -fill "gray($shadow%)" -opaque black \
@@ -548,13 +558,15 @@ else
 	# image has alpha channel or mask present
 	convert \
 		\( $tmpA1 $preproc1 \
-			-fuzz $tolerance -trim +repage \
+			$trimming \
 			-bordercolor none -border 50 \
 			-background white -alpha background \
 			$alpha_disable -write mpr:img $alpha_enable \
 			-alpha extract \
 			-morphology dilate disk:$dilate \
+			-bordercolor black -border 1 \
 			$eroding \
+			-shave 1x1 \
 			$cclproc \
 			-blur 0x1 -level 0x50% -write mpr:msk1 +delete \) \
 		\( mpr:msk1 -negate -fill "gray($shadow%)" -opaque black \

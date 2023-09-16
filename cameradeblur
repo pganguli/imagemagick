@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# Developed by Fred Weinhaus 8/22/2009 .......... revised 5/12/2019
+# Developed by Fred Weinhaus 8/22/2009 .......... revised 5/15/2023
 #
 # ------------------------------------------------------------------------------
 # 
@@ -237,7 +237,7 @@ tmpA1="$dir/cameradeblur_A_$$.mpc"
 tmpA2="$dir/cameradeblur_A_$$.cache"
 trap "rm -f $tmpI1 $tmpI2 $tmpA1 $tmpA2 $tmpF1 $tmpF2 $tmpL;" 0
 trap "rm -f $tmpI1 $tmpI2 $tmpA1 $tmpA2 $tmpF1 $tmpF2 $tmpL; exit 1" 1 2 3 15
-trap "rm -f $tmpI1 $tmpI2 $tmpA1 $tmpA2 $tmpF1 $tmpF2 $tmpL; exit 1" ERR
+#trap "rm -f $tmpI1 $tmpI2 $tmpA1 $tmpA2 $tmpF1 $tmpF2 $tmpL; exit 1" ERR
 
 # read the input image and filter image into the temp files and test validity.
 convert -quiet "$infile" +repage "$tmpI1" ||
@@ -413,8 +413,8 @@ elif [ "$type" = "defocus" ]; then
 		fyd=`convert xc: -format "%[fx:$amount/$h1]" info:`
 
 		convert \
-		\( -size ${w1}x1 xc: -fx "$fxd*(i-$cx))" -scale ${w1}x${h1}! -evaluate pow 2 \) \
-		\( -size 1x${h1} xc: -fx "$fyd*(j-$cy))" -scale ${w1}x${h1}! -evaluate pow 2 \) \
+		\( -size ${w1}x1 xc: -fx "$fxd*(i-$cx)" -scale ${w1}x${h1}! -evaluate pow 2 \) \
+		\( -size 1x${h1} xc: -fx "$fyd*(j-$cy)" -scale ${w1}x${h1}! -evaluate pow 2 \) \
 		-define compose:clamp=false -compose plus -composite -evaluate pow 0.5 -fx "jinc(u)" \
 		$tmpF1
 		

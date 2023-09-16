@@ -1,6 +1,6 @@
 #!/bin/bash
 # 
-# Developed by Fred Weinhaus 12/12/2007 .......... revised 10/16/2017
+# Developed by Fred Weinhaus 12/12/2007 .......... revised 9/1/2022
 #
 # ------------------------------------------------------------------------------
 # 
@@ -103,7 +103,6 @@
 # Note that the algorithm cannot correct beyond 45 degrees and cannot 
 # distinguish between exactly +45 degrees and exactly -45. Therefore you 
 # may need to do a 90, 180, or 270 degree rotation after using this script. 
-# You may need to do a 90, 180, or 270 degree rotation after using this script. 
 # If the outfile is left off, then the script will simply report the rotation 
 # angle needed to unrotate the image.
 # 

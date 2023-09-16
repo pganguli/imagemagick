@@ -1,6 +1,6 @@
 #!/bin/bash
 # 
-# Developed by Fred Weinhaus 5/1/2009 .......... revised 12/31/2018
+# Developed by Fred Weinhaus 5/1/2009 .......... revised 11/9/2021
 #
 # ------------------------------------------------------------------------------
 # 
@@ -791,7 +791,8 @@ if [ "$mode" = "vertical" ]; then
 		composite $tmpA3 $tmpA1 $tmpA4 $channels -virtual-pixel $vpmethod \
 			$backgroundcolor -displace ${xc}x${radius2} $tmpA1
 	else
-		convert $tmpA1 $tmpA3 $tmpA4 $channels -virtual-pixel $vpmethod $backgroundcolor \
+		# issue in IM 7, need to make all images 3 channel
+		convert $tmpA1 $tmpA3 $tmpA4 -colorspace sRGB $channels -virtual-pixel $vpmethod $backgroundcolor \
 			-define compose:args=${xc}x${radius2} -compose displace -composite $tmpA1
 	fi
 

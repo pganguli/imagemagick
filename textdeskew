@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# Developed by Fred Weinhaus 11/17/2016 .......... revised 2/16/2021
+# Developed by Fred Weinhaus 11/17/2016 .......... revised 9/11/2021
 #
 # ------------------------------------------------------------------------------
 # 
@@ -396,26 +396,23 @@ convert -quiet "$infile" -auto-orient +repage $dir/tmpI.mpc ||
 	
 # test amount of black (presumably text) in the image. Abort if too low
 std_pct=`convert $dir/tmpI.mpc -alpha off -format "%[fx:100*standard_deviation]" info:`
-echo "std_pct=$std_pct"
+#echo "std_pct=$std_pct"
 std_test=`echo "$std_pct < $thresh" | bc`
 [ $std_test -eq 1 ] && errMsg "--- FILE $infile HAS TOO FEW LINES OF TEXT (std=$std_pct%) ---"
 
 # create spectrum image
+# due to bug in FFT in Imagemagick around 7.0.10.61, explicitly set normalization to forward
 convert $dir/tmpI.mpc -alpha off \
-	-colorspace gray -fft +delete -evaluate log $logval \
+	-colorspace gray -define fourier:normalize=forward \
+	-fft +delete -evaluate log $logval \
 	$dir/tmpS.mpc
-
-convert $dir/tmpS.mpc tmpS1.png
 
 # attenuate spectrum by radial gradient
 wxh=`convert -ping $dir/tmpI.mpc -format "%wx%h" info:`
 convert $dir/tmpS.mpc \
 	\( -size $wxh radial-gradient:"gray($attenuate%)-white" \) \
 	-compose multiply -composite -auto-level -evaluate max 1 \
-	$dir/tmpS.mpc
-
-convert $dir/tmpS.mpc tmpS2.png
-	
+	$dir/tmpS.mpc	
  
 # get quantumrange
 qrange=`convert xc: -format "%[fx:quantumrange]" info:`
@@ -546,7 +543,7 @@ fi
 
 # set up trimming
 if [ "$trimval" != "" ]; then
-	trimming="-fuzz $trimval% +repage"
+	trimming="-fuzz $trimval% -trim +repage"
 else
 	trimming=""
 fi
@@ -559,7 +556,7 @@ else
 fi
 
 # do rotation to deskew
-convert $dir/tmpI.mpc -background "$color" -rotate $rotation $trimming $padding "$outfile1"
+convert $dir/tmpI.mpc -background "$color" -rotate $rotation +repage $trimming $padding "$outfile1"
 [ "$outfile2" != "" ] && convert $dir/tmpS.mpc "$outfile2"
 
 exit 0

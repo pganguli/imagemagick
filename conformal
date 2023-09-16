@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# Developed by Fred Weinhaus 6/29/2015 .......... revised 4/21/2020
+# Developed by Fred Weinhaus 6/29/2015 .......... revised 1/17/2022
 #
 # ------------------------------------------------------------------------------
 # 
@@ -363,7 +363,7 @@ elif [ $formula -eq 8 ]; then
 		-background "$bcolor" -virtual-pixel $vp $monitoring1 -fx \
 		"xx=(i-$wd2)/$wd2; yy=(j-$ht2)/$ht2; \
 		aa=4*(xx*xx-yy*yy)-1; bb=8*xx*yy; cc=(aa*aa+bb*bb); \
-		(cc==0))?$zcolor:v.p{$gx*$ww4*(aa/cc)+$ww2,-$gy*$hh2*(bb/cc)+$hh2}" \
+		(cc==0)?$zcolor:v.p{$gx*$ww4*(aa/cc)+$ww2,-$gy*$hh2*(bb/cc)+$hh2}" \
 		$monitoring2 "$outfile"
 
 fi

@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# Developed by Fred Weinhaus 6/25/2014 .......... revised 7/20/2019
+# Developed by Fred Weinhaus 6/25/2014 .......... revised 2/14/2022
 #
 # ------------------------------------------------------------------------------
 # 
@@ -492,7 +492,7 @@ for ((k=0; k<maxiters; k++)); do
 	diffsq=0
 	for (( i=0;i<numcolors; i++)); do
 		colordiff=`convert -size 1x1 xc:"${colorArr[$i]}" xc:"${newcolorArr[$i]}" \
-			-format "%[fx:(u.r-v.r)^2+(u.g-v.g)^2+(u.b-v.b)^2)/3]\n" info: | head -n 1`
+			-format "%[fx:((u.r-v.r)^2+(u.g-v.g)^2+(u.b-v.b)^2)/3]\n" info: | head -n 1`
 		diffsq=`convert xc: -format "%[fx:$diffsq + $colordiff]" info:`
 	done
 	rmse=`convert xc: -format "%[fx:100*sqrt($diffsq/$numcolors)]" info:`

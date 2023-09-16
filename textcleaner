@@ -1,6 +1,6 @@
 #!/bin/bash
 # 
-# Developed by Fred Weinhaus 6/9/2009 .......... revised 7/12/2021
+# Developed by Fred Weinhaus 6/9/2009 .......... revised 2/18/2022
 # 
 # ------------------------------------------------------------------------------
 # 
@@ -29,12 +29,12 @@
 # USAGE: textcleaner [-r rotate] [-l layout] [-c cropoff] [-g] [-e enhance ] 
 # [-f filtersize] [-o offset] [-u] [-P] [-t threshold] [-s sharpamt] 
 # [-s saturation] [-a adaptblur] [-T] [-p padamt] [-b bgcolor] [-F fuzzval] 
-# [-i invert] [-C compression] infile outfile
+# [-i invert] [-C compression] [-D density] [-R resize] infile outfile
 # USAGE: textcleaner [-help]
 # 
 # OPTIONS:
 # 
-# -r	  rotate			rotate image 90 degrees in direction specified if 
+# -r	  rotate			(pre-)rotate image 90 degrees in direction specified if 
 #                           aspect ratio does not match layout; options are cw 
 #                           (or clockwise), ccw (or counterclockwise) and n 
 #                           (or none); default=none or no rotation
@@ -75,6 +75,11 @@
 #                           (input or input and output); default is no inversion
 # -C      compression       TIFF output compression mode; choices are: none (n), 
 #                           lzw(l), zip(z), fax(f), and group4(g); default=none
+# -D      density           input density when reading single page vector (PDF) 
+#                           files; integer>0; default is no input density
+# -R      resize            resize after reading a single page vector when 
+#                           supersampling to rasterize; 0<=integer<100 (percent); 
+#                           default is no resize
 # 
 ###
 # 
@@ -84,24 +89,27 @@
 # 
 # DESCRIPTION: TEXTCLEANER processses a scanned document of text to clean
 # the text background and enhance the text. The order of processing is:
-# 1) optional 90 degree rotate if aspect does not match layout
-# 2) optional crop, 
-# 3) optional convert to grayscale, 
-# 4) optional enhance, 
-# 5) filter to clean background and optionally smooth/antialias, 
-# 6) optional unrotate (limited to about 5 degrees or less), 
-# 7) optional text smoothing,
-# 8) optional sharpening, 
-# 9) optional saturation change (if -g is not specified), 
-# 10) optional alternate text smoothing via adaptive blur
-# 11) optional auto trim of border (effective only if background well-cleaned),
-# 12) optional pad of border
+# 1) optional apply density for single page vector (PDF) files
+# 2) optional 90 degree rotate if aspect does not match layout
+# 3) optional crop, 
+# 4) optional convert to grayscale, 
+# 5) optional enhance, 
+# 6) filter to clean background and optionally smooth/antialias, 
+# 7) optional unrotate (limited to about 5 degrees or less), 
+# 8) optional text smoothing,
+# 9) optional sharpening, 
+# 10) optional saturation change (if -g is not specified), 
+# 11) optional alternate text smoothing via adaptive blur
+# 12) optional resize to compensate for increased read density for vector to raster output
+# 13) optional auto trim of border (effective only if background well-cleaned),
+# 14) optional pad of border
 # 
 # OPTIONS: 
 # 
 # -r rotate ... ROTATE image either clockwise or counterclockwise by 90 degrees,
 # if image aspect ratio does not match the layout mode. Choices are: cc (or 
 # clockwise), ccw (or counterclockwise) and n (or none). The default is no rotation.
+# Note: this is a pre-rotation
 # 
 # -l layout ... LAYOUT for determining if rotation is to be applied. The choices 
 # are p (or portrait) or l (or landscape). The image will be rotated if rotate is 
@@ -169,6 +177,17 @@
 # -C compression ... COMPRESSION mode for TIFF output. The choices are: none (n), 
 # lzw(l), zip(z), fax(f), and group4(g). The default=none.
 # 
+# -D density ... input DENSITY when reading a single page vector (PDF) file 
+# and outputting a raster image. Values are integers>0. The default is no 
+# input density to be applied. Note multi-page vector files will not be 
+# properly processed by this script.
+# 
+# -R resize ... final RESIZE when reading a single page vector (PDF) file when 
+# supersampling to rasterize the output. Values are 0<=integer<100 (percent) 
+# to downsample the image (typically back to its default size at 72 dpi). 
+# The default is no special resize. Note multi-page vector files will not be 
+# properly processed by this script.
+# 
 # CAVEAT: No guarantee that this script will work on all platforms, 
 # nor that trapping of inconsistent parameters is complete and 
 # foolproof. Use At Your Own Risk. 
@@ -197,6 +216,8 @@ bgcolor="white"		# color for output whiteboard background
 fuzzval=10			# fuzz value for determining bgcolor from image
 invert=""			# invert colors: 1 or 2
 compression="none"	# TIFF compression modes
+density=""          # input density for rasterizing vector files
+resize=""           # final resize 
 
 # set directory for temporary files
 dir="."    # suggestions are dir="." or dir="/tmp"
@@ -425,6 +446,27 @@ else
 					   		*) errMsg "--- COMPRESSION=$compression IS NOT A VALID CHOICE ---" ;;
 					   esac
 					   ;;
+				-D)    # get density
+					   shift  # to get the next parameter
+					   # test if parameter starts with minus sign 
+					   errorMsg="--- INVALID DENSITY SPECIFICATION ---"
+					   checkMinus "$1"
+					   density=`expr "$1" : '\([0-9]*\)'`
+					   [ "$density" = "" ] && errMsg "--- DENSITY=$density MUST BE A NON-NEGATIVE INTEGER ---"
+					   test=`echo "$density < 1" | bc`
+					   [ $test -eq 1 ] && errMsg "--- DENSITY=$density MUST BE AN INTEGER GREATER THAN 0 ---"
+					   ;;
+				-R)    # get resize
+					   shift  # to get the next parameter
+					   # test if parameter starts with minus sign 
+					   errorMsg="--- INVALID RESIZE SPECIFICATION ---"
+					   checkMinus "$1"
+					   resize=`expr "$1" : '\([0-9]*\)'`
+					   [ "$resize" = "" ] && errMsg "--- RESIZE=$resize MUST BE A NON-NEGATIVE INTEGER ---"
+					   testA=`echo "$resize < 0" | bc`
+					   testB=`echo "$resize > 100" | bc`
+					   [ $testA -eq 1 -o $testB -eq 1 ] && errMsg "--- RESIZE=$resize MUST BE AN INTEGER BETWEEN 0 AND 100 ---"
+					   ;;
 				 -)    # STDIN and end of arguments
 					   break
 					   ;;
@@ -487,14 +529,22 @@ if [ "$im_version" -gt "06080504" ]; then
 	setcspace=""
 fi
 
+# set up density
+if [ "$density" = "" ]; then
+	applydensity=""
+else
+	applydensity="-density $density"
+fi
+
 if [ "$invert" != "" ]; then
 	inversion1="-negate"
 else
 	inversion1=""
 fi	
 
+
 # read the input image into the TMP cached image.
-convert -quiet "$infile" +repage $inversion1 "$tmpA1" ||
+convert -quiet $applydensity "$infile" +repage $rotation $inversion1 "$tmpA1" ||
 	errMsg "--- FILE $infile NOT READABLE OR HAS ZERO SIZE ---"
 
 # get image size
@@ -503,7 +553,6 @@ hh=`convert $tmpA1 -ping -format "%h" info:`
 
 # get image h/w aspect ratio and determine if portrait=1 (h/w>1) or landscape=0 (h/w<1)
 aspect=`convert xc: -format "%[fx:($hh/$ww)>=1?1:0]" info:`
- 
 #echo "ww=$ww; hh=$hh; aspect=$aspect"
 
 # set up rotation
@@ -649,11 +698,18 @@ else
 	compressing=""
 fi
 
+# set up resize
+if [ "$resize" = "" ]; then
+	resizing=""
+else
+	resizing="-resize $resize%"
+fi
+
 # process image
-convert -respect-parenthesis \( $tmpA1 $rotation $cropping $makegray $enhancing \) \
+convert -respect-parenthesis \( $tmpA1 $cropping $makegray $enhancing \) \
 	\( -clone 0  $setcspace -colorspace gray -negate -lat ${filtersize}x${filtersize}+${offset}% -contrast-stretch 0 $blurring \) \
 	-alpha off -compose copy_opacity -composite -fill "$bgcolor" -opaque none -alpha off \
-	$unrotating $sharpening $modulation $adaptiveblurring $trimming $padding $inversion2 $compressing \
+	$unrotating $sharpening $modulation $adaptiveblurring $resizing $trimming $padding $inversion2 $compressing \
 	"$outfile"
 
 exit 0

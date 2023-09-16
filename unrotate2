@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# Developed by Fred Weinhaus 10/3/2019 .......... revised 4/14/2020
+# Developed by Fred Weinhaus 10/3/2019 .......... revised 11/26/2021
 #
 # ------------------------------------------------------------------------------
 # 
@@ -430,13 +430,6 @@ convert -quiet "$infile" +repage "$tmpA1" ||
 im_version=`convert -list configure | \
 	sed '/^LIB_VERSION_NUMBER */!d; s//,/;  s/,/,0/g;  s/,0*\([0-9][0-9]\)/\1/g' | head -n 1`
 
-# test if both bcolor and coords specified at the same time
-if [ "$bcolor" != "" -a "$coords" != "" ]; then
-  echo "--- BACKGROUND COLOR AND COODINATES CAN NOT BE USED TOGETHER ---"
-elif [ "$bcolor" = "" -a "$coords" = "" ]; then
-	coords="0,0"
-fi
-
 # get image width and height
 declare `convert -ping $tmpA1 -format "width=%w\nheight=%h\n" info:`
 
@@ -454,7 +447,9 @@ test=`convert xc: -format "%[fx:$wd>=$ht?1:0]" info:`
 coords1=`expr "$coords" : '\([0-9]*,[0-9]*\)'`
 
 # get color at user specified location
-if [ "$bcolor" != "" ]; then
+if [ "$bcolor" = "" -a "$coords" = "" ]; then
+	coords="0,0"
+elif [ "$bcolor" != "" ]; then
 	coords="0,0"
 elif [ "$coords1" != "" ]; then
 	x=`echo "$coords1" | cut -d, -f1`
@@ -530,6 +525,8 @@ num_lines=${#houghArr[*]}
 #echo "${houghArr[*]}"
 IFS=$OLDIFS
 
+[ $num_lines -lt 4 ] && echo "--- Warning: Too Few Hough Lines -- You May Need To Decrease -l Threshold Value ---"
+
 # compute needed dilation of lines as dilate = 0.5*max(w,h)*sin(0.5)
 dilation=`convert xc: -format "%[fx:round(0.5*max($ww,$hh)*sin(0.5*pi/180))]" info:`
 #echo "dilation=$dilation"
@@ -565,7 +562,7 @@ fi
 linearRegression() 
 	{
 	Arr="$1"
-	regression_Arr=(`echo "${Arr[*]}" | AWK \
+	regression_Arr=(`echo "${Arr[*]}" | awk \
 	'BEGIN { FS = ","; RS = " "; pi = atan2(0, -1); }
 	NF == 2 { x_sum += $1
 			  y_sum += $2
@@ -585,7 +582,7 @@ linearRegression()
 			  res = (y[i] - (slope * x[i] + inter))
 			  res_sq = res*res
 			  sumsq_res += res_sq
-			  sumsq_total += (y[i] - mean_y)**2
+			  sumsq_total += (y[i] - mean_y)^2
 			  sum_res += res
 			  abs_res = sqrt(res_sq)
 			  sum_abs_res += abs_res
@@ -594,8 +591,8 @@ linearRegression()
 		  r2 = 1 - (sumsq_res / sumsq_total)
 		  angle = (180/pi)*atan2(slope,1)
 		  ave_abs_res = sum_abs_res/num
-		  res_std = sqrt((sumsq_res/num)-(sum_res/num)**2)
-		  abs_res_std = sqrt((sumsq_res/num)-(sum_abs_res/num)**2)
+		  res_std = sqrt((sumsq_res/num)-(sum_res/num)^2)
+		  abs_res_std = sqrt((sumsq_res/num)-(sum_abs_res/num)^2)
 		  print "Slope:"slope
 		  print "Intercept:"inter
 		  print "R-Squared:"r2
